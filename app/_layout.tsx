@@ -11,6 +11,12 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
+export type RootStackParamList = {
+  "(tabs)": undefined; // No params for (tabs)
+  schedule: { id: number }; // Define `id` as a parameter for `schedule`
+  match: undefined; // Other routes can also be added here
+};
+
 export const unstable_settings = {
   initialRouteName: 'login', // Set default route to login
 };
@@ -25,16 +31,21 @@ export default function RootLayout() {
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [userHasAccess, setUserHasAccess] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check if token exists in SecureStore
     const checkToken = async () => {
       try {
         const token = await tokenService.getToken();
         setIsAuthenticated(!!token); // Set auth status based on token presence
+
+        // Example logic to check access based on token
+        const hasAccess = token && token.includes("access_schedule_match");
+        setUserHasAccess(!!hasAccess);
       } catch (e) {
         console.error("Error checking token:", e);
         setIsAuthenticated(false);
+        setUserHasAccess(false);
       }
     };
 
@@ -58,16 +69,29 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav isAuthenticated={isAuthenticated} />;
+  return <RootLayoutNav isAuthenticated={isAuthenticated} userHasAccess={userHasAccess} />;
 }
 
-function RootLayoutNav({ isAuthenticated }: { isAuthenticated: boolean }) {
-  return ( 
+function RootLayoutNav({
+  isAuthenticated,
+  userHasAccess,
+}: {
+  isAuthenticated: boolean;
+  userHasAccess: boolean;
+}) {
+  return (
     <Stack>
       {isAuthenticated ? (
         <>
-         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-         <Stack.Screen name="schedule" options={{ headerShown: true, title: "Weekly Timetable" }} />
+          <Stack.Screen name="home" options={{ headerShown: false,headerBackVisible:false }} />
+          {userHasAccess && (
+            <>
+              {/* <Stack.Screen
+                name="schedule"
+                options={{ headerShown: true, title: "Weekly Timetable" }}
+              /> */}
+            </>
+          )}
         </>
       ) : (
         <Stack.Screen name="login" options={{ headerShown: false }} />

@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useNavigation } from 'expo-router';
+import api from '@/config/config';
+import { RootStackParamList } from './_layout';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 interface CompetitionItem {
   id: number;
@@ -12,38 +15,56 @@ interface CompetitionItem {
 }
 
 const Page = () => {
-  const navigation = useNavigation();
-  const infoReferee = {
-    image: "https://ephoto360.com/uploads/w450/2018/08/16/logo-avat-min5b7543d71cf6d_14dfbfa7e7fd2d65c95470c8cd01c651.jpg",
-    name: "Lê Đình Thành",
-    role: "Trọng tài viên"
-  };
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const competitionData = [
-    {
-      id: 1,
-      image: "https://ephoto360.com/uploads/w450/2018/08/16/logo-avat-min5b7543d71cf6d_14dfbfa7e7fd2d65c95470c8cd01c651.jpg",
-      competitionName: 'Robot Speed Challenge',
-      tournamentName: 'National Robotics Championship 2024',
-      location: 'Hanoi, Vietnam'
+  const [competitionData, setCompetitionData] = useState<{
+    infoReferee: {
+      image: string;
+      name: string;
+      role: string;
+    };
+    competitions: CompetitionItem[];
+  }>({
+    infoReferee: {
+      image: '',
+      name: '',
+      role: '',
     },
-    {
-      id: 2,
-      image: "https://ephoto360.com/uploads/w450/2018/08/16/logo-avat-min5b7543d71cf6d_14dfbfa7e7fd2d65c95470c8cd01c651.jpg",
-      competitionName: 'Maze Solving Competition',
-      tournamentName: 'Asia STEM Expo 2024',
-      location: 'Bangkok, Thailand'
-    },
-    // Add more items as needed
-  ];
+    competitions: [],
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/api/referees/referee-sup-tournament');
+        const fetchedData = response.data.data;
+
+        setCompetitionData({
+          infoReferee: {
+            image: fetchedData.infoReferee.image,
+            name: fetchedData.infoReferee.name,
+            role: fetchedData.infoReferee.role,
+          },
+          competitions: fetchedData.competitions.map((item: any) => ({
+            id: item.id,
+            image: item.image,
+            competitionName: item.competitionName,
+            tournamentName: item.tournamentName,
+            location: item.location,
+          })),
+        });
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const renderCompetitionItem = ({ item }: { item: CompetitionItem }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('schedule' as never)}>
+    <TouchableOpacity onPress={() => navigation.navigate('schedule', { id: item.id })}>
       <View style={styles.optionContainer}>
-        <Image
-          source={{ uri: item.image }}
-          style={styles.optionImage}
-        />
+        <Image source={{ uri: item.image }} style={styles.optionImage} />
         <View style={styles.textContainer}>
           <Text style={styles.optionText}>{item.competitionName}</Text>
           <Text style={styles.subtitle}>{item.tournamentName}</Text>
@@ -59,6 +80,7 @@ const Page = () => {
       <Stack.Screen
         options={{
           headerShown: false,
+          headerBackVisible: false,
         }}
       />
       <View style={styles.container}>
@@ -69,19 +91,16 @@ const Page = () => {
         </View>
 
         <View style={styles.profileContainer}>
-          <Image
-            source={{ uri: infoReferee.image }}
-            style={styles.profileImage}
-          />
-          <Text style={styles.userName}>{infoReferee.name}</Text>
-          <Text style={styles.userContact}>{infoReferee.role}</Text>
+          <Image source={{ uri: competitionData.infoReferee.image }} style={styles.profileImage} />
+          <Text style={styles.userName}>{competitionData.infoReferee.name}</Text>
+          <Text style={styles.userContact}>{competitionData.infoReferee.role}</Text>
         </View>
 
         <View style={styles.accountOverview}>
           <Text style={styles.accountOverviewTitle}>Nội dung thi đấu</Text>
 
           <FlatList
-            data={competitionData}
+            data={competitionData.competitions}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderCompetitionItem}
             contentContainerStyle={styles.listContentContainer}
@@ -90,7 +109,7 @@ const Page = () => {
       </View>
     </>
   );
-}
+};
 
 export default Page;
 
@@ -147,7 +166,7 @@ const styles = StyleSheet.create({
     shadowRadius: 1.41,
     elevation: 2,
     flex: 1,
-    marginBottom:20
+    marginBottom: 20,
   },
   accountOverviewTitle: {
     fontSize: 16,

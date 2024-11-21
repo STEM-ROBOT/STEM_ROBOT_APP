@@ -19,7 +19,7 @@ export default function Login() {
       const response = await api.post('/api/auth/login', { email, password });
       const token = response?.data?.result?.token;
       await tokenService.saveToken(token);
-      navigation.navigate('(tabs)' as never);
+      navigation.navigate('home' as never);
     } catch (error) {
       Alert.alert("Login Failed", "Invalid email or password");
       console.error("Login error:", error);
