@@ -1,31 +1,28 @@
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import tokenService from '@/config/tokenservice';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+// Export ErrorBoundary for handling errors in the layout
+export { ErrorBoundary } from 'expo-router';
 
 export type RootStackParamList = {
-  "(tabs)": undefined; // No params for (tabs)
-  schedule: { id: number }; // Define `id` as a parameter for `schedule`
-  match: undefined; // Other routes can also be added here
+  home: undefined;
+  schedule: { id: number };
+  match: { matchId: number };
+  login: undefined;
 };
 
+// Set the initial route
 export const unstable_settings = {
-  initialRouteName: 'login', // Set default route to login
+  initialRouteName: 'login', // Ensure login is the initial route
 };
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
+  const [fontsLoaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
@@ -34,68 +31,81 @@ export default function RootLayout() {
   const [userHasAccess, setUserHasAccess] = useState<boolean>(false);
 
   useEffect(() => {
+    // Keep the splash screen visible until authentication is resolved
+    SplashScreen.preventAutoHideAsync();
+
     const checkToken = async () => {
       try {
         const token = await tokenService.getToken();
-        setIsAuthenticated(!!token); // Set auth status based on token presence
+        setIsAuthenticated(!!token);
 
-        // Example logic to check access based on token
-        const hasAccess = token && token.includes("access_schedule_match");
-        setUserHasAccess(!!hasAccess);
+        // Example: Check if the token grants access
+        setUserHasAccess(token?.includes('access_schedule_match') || false);
       } catch (e) {
-        console.error("Error checking token:", e);
+        console.error('Error checking token:', e);
         setIsAuthenticated(false);
         setUserHasAccess(false);
       }
     };
 
-    checkToken(); // Run token check on mount
+    checkToken();
   }, []);
 
-  // Handle any font loading errors
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  // Hide the splash screen once fonts are loaded and the token check is complete
-  useEffect(() => {
-    if (loaded && isAuthenticated !== null) {
+    if (fontsLoaded && isAuthenticated !== null) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, isAuthenticated]);
+  }, [fontsLoaded, isAuthenticated]);
 
-  // Wait until fonts are loaded and token check is complete
-  if (!loaded || isAuthenticated === null) {
-    return null;
+  if (!fontsLoaded || isAuthenticated === null) {
+    return null; // Prevent rendering until fonts and authentication are resolved
   }
 
-  return <RootLayoutNav isAuthenticated={isAuthenticated} userHasAccess={userHasAccess} />;
-}
-
-function RootLayoutNav({
-  isAuthenticated,
-  userHasAccess,
-}: {
-  isAuthenticated: boolean;
-  userHasAccess: boolean;
-}) {
   return (
-    <Stack>
-      {isAuthenticated ? (
-        <>
-          <Stack.Screen name="home" options={{ headerShown: false,headerBackVisible:false }} />
-          {userHasAccess && (
-            <>
-              {/* <Stack.Screen
-                name="schedule"
-                options={{ headerShown: true, title: "Weekly Timetable" }}
-              /> */}
-            </>
-          )}
-        </>
-      ) : (
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-      )}
-    </Stack>
+    <NavigationContainer>
+      <Stack initialRouteName="login">
+        {/* Login Screen */}
+        {!isAuthenticated && (
+          <Stack.Screen
+            name="login"
+            options={{
+              headerShown: false,
+            }}
+          />
+        )}
+
+        {/* Home Screen */}
+        {isAuthenticated && (
+          <Stack.Screen
+            name="home"
+            options={{
+              headerShown: false,
+            }}
+          />
+        )}
+
+        {/* Schedule Screen */}
+        {isAuthenticated && userHasAccess && (
+          <Stack.Screen
+            name="schedule"
+            options={{
+              headerShown: true,
+              title: 'Schedule',
+            }}
+          />
+        )}
+
+        {/* Match Details Screen */}
+        {isAuthenticated && userHasAccess && (
+          <Stack.Screen
+            name="match"
+            options={{
+              headerShown: true,
+              title: 'Match Details',
+            }}
+          />
+        )}
+      </Stack>
+    </NavigationContainer>
   );
 }

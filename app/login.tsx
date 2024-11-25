@@ -1,28 +1,25 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import api from '../config/config';
 import tokenService from '../config/tokenservice'
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 
 export default function Login() {
-  const navigation = useNavigation();
+  const router = useRouter();
 
-  // State to store user input
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
     try {
-
       const response = await api.post('/api/auth/login', { email, password });
       const token = response?.data?.result?.token;
       await tokenService.saveToken(token);
-      navigation.navigate('home' as never);
+      router.push('/home');
     } catch (error) {
-      Alert.alert("Login Failed", "Invalid email or password");
-      console.error("Login error:", error);
+      Alert.alert('Login Failed', 'Invalid email or password');
+      console.error('Login error:', error);
     }
   };
 

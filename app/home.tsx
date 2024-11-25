@@ -1,10 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useNavigation } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import api from '@/config/config';
-import { RootStackParamList } from './_layout';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { NavigationProp } from '@react-navigation/native';
+
+export type RootStackParamList = {
+  home: undefined;
+  schedule: { id: number }; 
+  match: { matchId: number };
+  login: undefined;
+};
+interface RefereeInfo {
+  image: string;
+  name: string;
+  role: string;
+}
 
 interface CompetitionItem {
   id: number;
@@ -15,14 +26,10 @@ interface CompetitionItem {
 }
 
 const Page = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
+  
+  const router = useRouter();
   const [competitionData, setCompetitionData] = useState<{
-    infoReferee: {
-      image: string;
-      name: string;
-      role: string;
-    };
+    infoReferee: RefereeInfo;
     competitions: CompetitionItem[];
   }>({
     infoReferee: {
@@ -32,6 +39,8 @@ const Page = () => {
     },
     competitions: [],
   });
+
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,7 +54,7 @@ const Page = () => {
             name: fetchedData.infoReferee.name,
             role: fetchedData.infoReferee.role,
           },
-          competitions: fetchedData.competitions.map((item: any) => ({
+          competitions: fetchedData.competitions.map((item: CompetitionItem) => ({
             id: item.id,
             image: item.image,
             competitionName: item.competitionName,
@@ -55,6 +64,8 @@ const Page = () => {
         });
       } catch (error) {
         console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -62,7 +73,7 @@ const Page = () => {
   }, []);
 
   const renderCompetitionItem = ({ item }: { item: CompetitionItem }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('schedule', { id: item.id })}>
+    <TouchableOpacity onPress={() => router.push({ pathname: "/schedule/[id]", params: { id: item.id } })}>
       <View style={styles.optionContainer}>
         <Image source={{ uri: item.image }} style={styles.optionImage} />
         <View style={styles.textContainer}>
@@ -75,10 +86,19 @@ const Page = () => {
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#0E2F24" />
+      </View>
+    );
+  }
+
   return (
     <>
       <Stack.Screen
         options={{
+          
           headerShown: false,
           headerBackVisible: false,
         }}
@@ -117,6 +137,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F4F6FA',
+  },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     backgroundColor: '#0E2F24',

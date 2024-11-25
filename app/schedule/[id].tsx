@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { Agenda, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
-import EnterMatchCodeModal from '../components/EnterMatchCodeModal';
+
 import { Stack } from 'expo-router';
 import { useRoute } from '@react-navigation/native';
 import api from '@/config/config';
+import { useLocalSearchParams, useSearchParams } from 'expo-router/build/hooks';
+import EnterMatchCodeModal from '@/components/EnterMatchCodeModal';
 
 interface TeamMatch {
   teamId: number;
@@ -24,21 +26,25 @@ interface ScheduleReferee {
 }
 
 const Schedule = () => {
-  const route = useRoute();
-  const { id } = route.params as { id: number };
+  const {id} = useLocalSearchParams();
 
-  const [scheduleReferee, setScheduleReferee] = useState<ScheduleReferee[]>([]); // State for schedule data
+  const [scheduleReferee, setScheduleReferee] = useState<ScheduleReferee[]>([]);
   const [items, setItems] = useState<{ [key: string]: ScheduleReferee[] }>({});
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+
+  const firstDate = scheduleReferee.length > 0
+    ? scheduleReferee[0].startTime.split("T")[0]
+    : new Date().toISOString().split("T")[0];
+
+  const [selectedDate, setSelectedDate] = useState(firstDate);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await api.get(`/api/schedules/schedule-referee-sup?refereeCompetitionId=${id}`);
         const fetchedData = response.data.scheduleReferee;
-        console.log(fetchedData);
-        setScheduleReferee(fetchedData); // Set the fetched data
+        setScheduleReferee(fetchedData);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -47,14 +53,9 @@ const Schedule = () => {
     fetchData();
   }, [id]);
 
-  const firstDate = scheduleReferee.length > 0
-    ? scheduleReferee[0].startTime.split("T")[0]
-    : new Date().toISOString().split("T")[0]; // Default to today's date if no data
-
-  const [selectedDate, setSelectedDate] = useState(firstDate); // Initialize with the first date
-
+  // Filter matches for the selected date
   useEffect(() => {
-    const formatItems = () => {
+    const filterMatchesByDate = () => {
       const filteredItems: { [key: string]: ScheduleReferee[] } = {};
       scheduleReferee.forEach((refereeSchedule) => {
         const date = refereeSchedule.startTime.split("T")[0];
@@ -68,7 +69,7 @@ const Schedule = () => {
       setItems(filteredItems);
     };
 
-    formatItems();
+    filterMatchesByDate();
   }, [selectedDate, scheduleReferee]);
 
   const renderItem = (item: ScheduleReferee) => (
@@ -95,6 +96,12 @@ const Schedule = () => {
     </View>
   );
 
+  const renderEmptyDate = () => (
+    <View style={styles.emptyDate}>
+      <Text style={styles.noMatchText}>Không có lịch thi đấu</Text>
+    </View>
+  );
+
   const handleMatchCodeSubmit = (code: string) => {
     console.log("Submitted match code:", code);
     console.log("Match ID:", selectedMatchId);
@@ -111,6 +118,7 @@ const Schedule = () => {
     <>
       <Stack.Screen
         options={{
+        
           headerShown: true,
           title: "Lịch trình",
         }}
@@ -129,12 +137,8 @@ const Schedule = () => {
         <Agenda
           items={items}
           renderItem={renderItem}
+          renderEmptyDate={renderEmptyDate}
           selected={selectedDate}
-          renderEmptyDate={() => (
-            <View style={styles.emptyDate}>
-              <Text>No events</Text>
-            </View>
-          )}
           onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
           monthFormat={'MMMM yyyy'}
         />
@@ -203,6 +207,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: 50,
+  },
+  noMatchText: {
+    fontSize: 16,
+    color: '#888',
   },
   detailsButton: {
     backgroundColor: '#007BFF',
