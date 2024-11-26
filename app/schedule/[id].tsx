@@ -87,6 +87,19 @@ const Schedule = () => {
       <TouchableOpacity
         style={styles.detailsButton}
         onPress={() => {
+          const currentTime = new Date().getTime();
+          const startTime = new Date(item.startTime).getTime();
+          const endTime = new Date(item.endTime).getTime();
+      
+          if (currentTime < startTime) {
+            Alert.alert("Thông báo", "Chưa đến giờ vào trận!");
+            return;
+          }
+      
+          if (currentTime > endTime) {
+            Alert.alert("Thông báo", "Thời gian vào trận đã kết thúc!");
+            return;
+          }
           setSelectedMatchId(item.id);
           setModalVisible(true);
         }}

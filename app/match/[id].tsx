@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { ProgressBar } from 'react-native-paper';
 import api from '@/config/config';
@@ -116,7 +116,7 @@ const Match = () => {
 
     useEffect(() => {
         const handleResultData = (data: ResultData[]) => {
-            console.log("rs", data)
+            // console.log("rs", data)
             let mapdata: ResultData[] =
                 data.map((item: any) => ({
                     id: item.id,
@@ -128,7 +128,7 @@ const Match = () => {
         };
 
         const handleActionData = (data: Action[]) => {
-            console.log("Received Data:", data);
+            // console.log("Received Data:", data);
 
             if (Array.isArray(data)) {
                 let mappedActions: Action[] = data.map((action) => ({
@@ -251,53 +251,74 @@ const Match = () => {
     useEffect(() => {
         if (!matchData) return;
 
-        const startTimeString = `${currentDate}T${matchData.matchInfo.startTime}`;
-        const endTimeString = `${currentDate}T${matchData.matchInfo.endTime}`;
+        const haftDurationSeconds = timeToSeconds(matchData.matchInfo.durationHaft);
+        const breakDurationSeconds = parseInt(matchData.matchInfo.breakHaftTime, 10) * 60; // Thời gian nghỉ giữa hiệp
+        const totalMatchSeconds =
+            matchData.matchInfo.haftMatch.length * haftDurationSeconds +
+            (matchData.matchInfo.haftMatch.length - 1) * breakDurationSeconds; // Tổng thời gian trận đấu
 
-        const startTime = new Date(startTimeString).getTime();
-        const endTime = new Date(endTimeString).getTime();
-        const totalSeconds = (endTime - startTime) / 1000;
+        const startTime = new Date(`${currentDate}T${matchData.matchInfo.startTime}`).getTime();
+        const currentTime = Date.now();
 
-        const halfDurationSeconds = timeToSeconds(matchData.matchInfo.durationHaft);
-        const breakDurationSeconds = parseInt(matchData.matchInfo.breakHaftTime, 10) * 60;
-
-        const firstHalfEnd = halfDurationSeconds;
-        const breakEnd = firstHalfEnd + breakDurationSeconds;
-        const secondHalfEnd = totalSeconds;
+        // Nếu trận đấu chưa bắt đầu
+        if (currentTime < startTime) {
+            setPhase("Chưa bắt đầu");
+            setElapsedTime("00:00");
+            setProgress(0); // ProgressBar ở mức 0
+            return;
+        }
 
         const interval = setInterval(() => {
-            const currentTime = new Date().getTime();
-            const elapsedSeconds = (currentTime - startTime) / 1000;
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - startTime) / 1000);
 
-            const hours = Math.floor(elapsedSeconds / 3600);
-            const minutes = Math.floor((elapsedSeconds % 3600) / 60);
-            const seconds = Math.floor(elapsedSeconds % 60);
-            setElapsedTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
-
-            if (elapsedSeconds < firstHalfEnd) {
-                setPhase("Hiệp 1");
-                setProgress(Number((elapsedSeconds / totalSeconds).toFixed(2))); // Limit precision
-            } else if (elapsedSeconds < breakEnd) {
-                setPhase("Thời gian nghỉ");
-                setProgress(Number((elapsedSeconds / totalSeconds).toFixed(2))); // Limit precision
-            } else if (elapsedSeconds < secondHalfEnd) {
-                setPhase("Hiệp 2");
-                setProgress(Number((elapsedSeconds / totalSeconds).toFixed(2))); // Limit precision
-            } else {
+            if (elapsedSeconds >= totalMatchSeconds) {
                 setPhase("Hết giờ");
-                setProgress(1); // Ensure it completes exactly at 1
+                setProgress(1); // Hoàn thành ProgressBar
+                setElapsedTime("Hết giờ");
                 clearInterval(interval);
+                return;
             }
+
+            // Tính toán thời gian đã trôi qua
+            const minutes = Math.floor(elapsedSeconds / 60);
+            const seconds = elapsedSeconds % 60;
+            setElapsedTime(`${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`);
+
+            // Xác định trạng thái hiện tại: hiệp hoặc nghỉ
+            let currentPhase = "Hết giờ";
+            for (let i = 0; i < matchData.matchInfo.haftMatch.length; i++) {
+                const phaseStart = i * (haftDurationSeconds + breakDurationSeconds);
+                const phaseEnd = phaseStart + haftDurationSeconds;
+
+                if (elapsedSeconds >= phaseStart && elapsedSeconds < phaseEnd) {
+                    currentPhase = `Hiệp ${matchData.matchInfo.haftMatch[i].haftName}`; // Hiển thị "Hiệp" trước tên hiệp
+                    break;
+                } else if (elapsedSeconds >= phaseEnd && elapsedSeconds < phaseEnd + breakDurationSeconds) {
+                    currentPhase = "Thời gian nghỉ"; // Nghỉ giữa hiệp
+                    break;
+                }
+            }
+
+            setPhase(currentPhase);
+
+            // Cập nhật tiến trình ProgressBar
+            const currentProgress = Math.min(elapsedSeconds / totalMatchSeconds, 1); // Giới hạn progress trong [0, 1]
+            setProgress(Number(currentProgress.toFixed(2))); // Giới hạn độ chính xác
         }, 1000);
 
-        return () => clearInterval(interval);
-    }, [matchData]);
+        return () => clearInterval(interval); // Dọn dẹp khi component unmount
+    }, [matchData, currentDate]);
+
+
+
     const handleEventClick = async (scoreId: number, teamId: number) => {
         try {
             if (!matchData) {
                 console.error('matchData is null or undefined');
                 return;
             }
+
             const startTimeString = `${currentDate}T${matchData.matchInfo.startTime}`;
             const startTime = new Date(startTimeString).getTime();
             const currentTime = new Date().getTime();
@@ -310,6 +331,11 @@ const Match = () => {
                 matchData.matchInfo.haftMatch.find(
                     (half) => `Hiệp ${half.haftName}` === phase
                 )?.haftId || 0;
+
+            if (matchHalfId === 0) {
+                Alert.alert("Thông báo", "Không thể gửi!");
+                return;              
+            }
             const requestData = {
                 eventTime: formattedTime,
                 matchHalfId: matchHalfId,
@@ -346,10 +372,11 @@ const Match = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: "",
+                    title: "Lịch trình",
                 }}
             />
             <ScrollView style={styles.container}>
+                {/* Match Header */}
                 {
                     teamMatchResult.length >= 2 && (
                         <View style={styles.headerContainer}>
@@ -373,8 +400,10 @@ const Match = () => {
 
                 {/* Progress Bar with Elapsed Time */}
                 <View style={styles.progressContainer}>
-                    <Text style={styles.elapsedTimeText}>{elapsedTime}</Text>
-                    <ProgressBar progress={progress} color="#4CAF50" style={styles.progressBar} />
+                    <Text style={styles.elapsedTimeText}>{phase === "Chưa bắt đầu" ? "00:00" : elapsedTime}</Text>
+                    <View style={styles.customProgressBarContainer}>
+                        <View style={[styles.customProgressBar, { width: `${progress * 100}%` }]} />
+                    </View>
                     <Text style={styles.phaseText}>{phase}</Text>
                 </View>
                 {listActionResult.length > 0 && (
@@ -595,4 +624,17 @@ const styles = StyleSheet.create({
     },
     errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     errorText: { color: 'red', fontSize: 16 },
+    customProgressBarContainer: {
+        height: 10,
+        width: '100%',
+        backgroundColor: '#e0e0e0',
+        borderRadius: 5,
+        overflow: 'hidden',
+        marginVertical: 10,
+    },
+    customProgressBar: {
+        height: '100%',
+        backgroundColor: '#4CAF50',
+        borderRadius: 5,
+    },
 });

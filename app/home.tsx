@@ -4,10 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import api from '@/config/config';
 import { NavigationProp } from '@react-navigation/native';
+import tokenService from '@/config/tokenservice';
 
 export type RootStackParamList = {
   home: undefined;
-  schedule: { id: number }; 
+  schedule: { id: number };
   match: { matchId: number };
   login: undefined;
 };
@@ -26,7 +27,7 @@ interface CompetitionItem {
 }
 
 const Page = () => {
-  
+
   const router = useRouter();
   const [competitionData, setCompetitionData] = useState<{
     infoReferee: RefereeInfo;
@@ -41,6 +42,7 @@ const Page = () => {
   });
 
   const [loading, setLoading] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,6 +73,10 @@ const Page = () => {
 
     fetchData();
   }, []);
+  const handleLogout = () => {
+    tokenService.removeToken();
+    router.push('/login');
+  };
 
   const renderCompetitionItem = ({ item }: { item: CompetitionItem }) => (
     <TouchableOpacity onPress={() => router.push({ pathname: "/schedule/[id]", params: { id: item.id } })}>
@@ -98,16 +104,23 @@ const Page = () => {
     <>
       <Stack.Screen
         options={{
-          
+
           headerShown: false,
           headerBackVisible: false,
         }}
       />
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.menuIcon}>
+          <TouchableOpacity style={styles.menuIcon} onPress={() => setMenuVisible(!menuVisible)}>
             <Ionicons name="ellipsis-vertical" size={24} color="white" />
           </TouchableOpacity>
+          {menuVisible && (
+            <View style={styles.menu}>
+              <TouchableOpacity onPress={handleLogout} style={styles.menuItem}>
+                <Text style={styles.menuText}>Đăng xuất</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View style={styles.profileContainer}>
@@ -236,4 +249,27 @@ const styles = StyleSheet.create({
   optionIcon: {
     marginLeft: 'auto',
   },
+  menu: {
+    position: 'absolute',
+    top: 60, // Điều chỉnh để menu nằm dưới icon
+    right: 20,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000, // Đảm bảo hiển thị phía trên các thành phần khác
+  },
+  menuItem: {
+    padding: 15,
+    // borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  menuText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  
 });
