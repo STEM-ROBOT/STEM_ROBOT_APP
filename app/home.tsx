@@ -65,7 +65,8 @@ const Page = () => {
           })),
         });
       } catch (error) {
-        console.error('Error fetching data:', error);
+        tokenService.removeToken();
+        router.push('/login');
       } finally {
         setLoading(false);
       }
@@ -271,5 +272,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  
+
 });
