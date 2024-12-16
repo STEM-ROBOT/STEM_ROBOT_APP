@@ -199,7 +199,7 @@ const Match = () => {
                 });
 
             api
-                .get(`/api/actions/referee-sup-action?scheduleId=${id}`)
+                .get(`/api/actions/referee-sup-action/${id}`)
                 .then((response) => {
                     if (response.data === "timeout") {
                         if (hubConnectionActionRef.current) {

@@ -14,7 +14,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       const response = await api.post('/api/auth/login', { email, password });
-      const token = response?.data?.result?.token;
+      const token = response?.data?.token;
       await tokenService.saveToken(token);
       router.push('/home');
     } catch (error) {
