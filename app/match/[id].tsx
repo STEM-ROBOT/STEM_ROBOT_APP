@@ -199,7 +199,7 @@ const Match = () => {
                 });
 
             api
-                .get(`/api/actions/referee-sup-action?scheduleId=${id}`)
+                .get(`/api/actions/referee-sup-action/${id}`)
                 .then((response) => {
                     if (response.data === "timeout") {
                         if (hubConnectionActionRef.current) {
@@ -210,6 +210,7 @@ const Match = () => {
                         response.data !== "notstarted" &&
                         response.data
                     ) {
+                        
                         setListActionResult(response.data);
                         // previousDataRef.current = response.data;
                     }
@@ -334,7 +335,7 @@ const Match = () => {
 
             if (matchHalfId === 0) {
                 Alert.alert("Thông báo", "Không thể gửi!");
-                return;              
+                return;
             }
             const requestData = {
                 eventTime: formattedTime,
@@ -426,7 +427,7 @@ const Match = () => {
                                                         : styles.statusRejected,
                                             ]}
                                         >
-                                            {report.status}
+                                            {report.status === "pending" ? "Chờ xử lý" : report.status === "accept" ? "Được chấp nhận" : "Bị từ chối"}
                                         </Text>
                                     </View>
                                 </View>

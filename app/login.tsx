@@ -14,7 +14,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       const response = await api.post('/api/auth/login', { email, password });
-      const token = response?.data?.result?.token;
+      const token = response?.data?.token;
       await tokenService.saveToken(token);
       router.push('/home');
     } catch (error) {
@@ -36,7 +36,7 @@ export default function Login() {
           style={styles.logo}
         />
 
-        <Text style={styles.title}>Sign in</Text>
+        <Text style={styles.title}>Đăng nhập</Text>
 
         <TextInput
           style={styles.input}
@@ -50,7 +50,7 @@ export default function Login() {
         <View style={styles.passwordContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder="Mật khẩu"
             secureTextEntry
             placeholderTextColor="#8a8a8a"
             value={password}
@@ -59,14 +59,14 @@ export default function Login() {
         </View>
 
         <TouchableOpacity style={styles.signInButton} onPress={handleLogin}>
-          <Text style={styles.signInText}>Sign in</Text>
+          <Text style={styles.signInText}>Đăng nhập</Text>
         </TouchableOpacity>
 
         <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Don't have an account?</Text>
+          <Text style={styles.signUpText}>Bạn chưa có tài khoản?</Text>
         </View>
 
-        <Text style={styles.orText}>Contact for :</Text>
+        <Text style={styles.orText}>Liên hệ :</Text>
 
         <View style={styles.socialContainer}>
           <TouchableOpacity style={styles.socialButton}>
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   signInButton: {
     width: '100%',
     height: 50,
-    backgroundColor: '#6b38fb',
+    backgroundColor: '#0076C1',
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
